@@ -1,6 +1,7 @@
 import { realtimeManager } from '@/utils/supabase/realtime-client';
 import { realtimeToasts } from '@/lib/toast';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { realtime, success, warning } from './logger';
 
 /**
  * Subscription wrapper utilities for easier real-time integration
@@ -42,9 +43,7 @@ export async function subscribeToTable(
   } = config;
 
   try {
-    console.log(
-      `🔌 Creating subscription: ${channelName} for ${table} ${event}`,
-    );
+    realtime(`Creating subscription: ${channelName} for ${table} ${event}`);
 
     const channel = await realtimeManager.subscribe(
       channelName,
@@ -52,7 +51,7 @@ export async function subscribeToTable(
       table,
       (payload) => {
         try {
-          console.log(`📡 ${channelName} received ${event} event:`, payload);
+          realtime(`${channelName} received ${event} event:`, payload);
           onEvent(payload);
         } catch (error) {
           console.error(`❌ Error in ${channelName} event handler:`, error);
@@ -96,7 +95,7 @@ export async function subscribeToTable(
         try {
           clearInterval(connectionInterval);
           await realtimeManager.unsubscribe(channelName);
-          console.log(`🔌 Successfully unsubscribed from ${channelName}`);
+          success(`Successfully unsubscribed from ${channelName}`);
         } catch (error) {
           console.error(`❌ Error unsubscribing from ${channelName}:`, error);
           throw error;
@@ -133,8 +132,8 @@ export async function subscribeToTasks(
     filter: `user_id=eq.${userId}`,
     onEvent,
     onError,
-    onConnect: () => console.log('✅ Tasks subscription connected'),
-    onDisconnect: () => console.log('❌ Tasks subscription disconnected'),
+            onConnect: () => success('Tasks subscription connected'),
+        onDisconnect: () => warning('Tasks subscription disconnected'),
   });
 }
 
@@ -153,8 +152,8 @@ export async function subscribeToHabits(
     filter: `user_id=eq.${userId}`,
     onEvent,
     onError,
-    onConnect: () => console.log('✅ Habits subscription connected'),
-    onDisconnect: () => console.log('❌ Habits subscription disconnected'),
+            onConnect: () => success('Habits subscription connected'),
+        onDisconnect: () => warning('Habits subscription disconnected'),
   });
 }
 
@@ -173,9 +172,9 @@ export async function subscribeToHabitEvents(
     filter: `user_id=eq.${userId}`,
     onEvent,
     onError,
-    onConnect: () => console.log('✅ Habit events subscription connected'),
+    onConnect: () => success('Habit events subscription connected'),
     onDisconnect: () =>
-      console.log('❌ Habit events subscription disconnected'),
+      warning('Habit events subscription disconnected'),
   });
 }
 
@@ -210,13 +209,13 @@ export async function cleanupUserSubscriptions(userId: string): Promise<void> {
     for (const channelName of channelNames) {
       try {
         await realtimeManager.unsubscribe(channelName);
-        console.log(`🧹 Cleaned up ${channelName}`);
+        realtime(`Cleaned up ${channelName}`);
       } catch (error) {
         console.warn(`⚠️ Failed to cleanup ${channelName}:`, error);
       }
     }
 
-    console.log(`✅ Cleaned up all subscriptions for user ${userId}`);
+    success(`Cleaned up all subscriptions for user ${userId}`);
   } catch (error) {
     console.error(`❌ Error cleaning up user subscriptions:`, error);
     throw error;

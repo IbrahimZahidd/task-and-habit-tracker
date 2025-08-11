@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (summaryResult) {
-        console.log('Summary data received:', summaryResult);
+        // Summary data received - logging removed for security
         // Generate CSV for summary - handle array format from RPC
         const summaryData = Array.isArray(summaryResult)
           ? summaryResult[0]

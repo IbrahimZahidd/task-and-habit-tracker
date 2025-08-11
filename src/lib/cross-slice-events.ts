@@ -6,6 +6,8 @@
  * without direct dependencies and enables real-time updates across the app.
  */
 
+import { event } from './logger';
+
 // Event types for different actions
 export type TaskEventType = 
   | 'TASK_CREATED'
@@ -87,7 +89,7 @@ class CrossSliceEventManager {
     const listenerSet = this.listeners.get(eventType)!;
     listenerSet.add({ id, listener });
 
-    console.log(`🔗 Subscribed to ${eventType} events (ID: ${id})`);
+    event(`Subscribed to ${eventType} events (ID: ${id})`);
 
     return {
       eventType,
@@ -106,7 +108,7 @@ class CrossSliceEventManager {
       for (const item of listenerSet) {
         if (item.id === handle.id) {
           listenerSet.delete(item);
-          console.log(`🔗 Unsubscribed from ${handle.eventType} events (ID: ${handle.id})`);
+          event(`Unsubscribed from ${handle.eventType} events (ID: ${handle.id})`);
           break;
         }
       }
@@ -121,7 +123,7 @@ class CrossSliceEventManager {
   emit(eventType: EventType, payload: EventPayload): void {
     const listenerSet = this.listeners.get(eventType);
     if (listenerSet) {
-      console.log(`🔗 Emitting ${eventType} event to ${listenerSet.size} listeners`);
+      event(`Emitting ${eventType} event to ${listenerSet.size} listeners`);
       listenerSet.forEach(({ listener }) => {
         try {
           listener(payload);
@@ -130,7 +132,7 @@ class CrossSliceEventManager {
         }
       });
     } else {
-      console.log(`🔗 No listeners for ${eventType} event`);
+      event(`No listeners for ${eventType} event`);
     }
   }
 
@@ -156,7 +158,7 @@ class CrossSliceEventManager {
    */
   clearAll(): void {
     this.listeners.clear();
-    console.log('🔗 Cleared all event listeners');
+    event('Cleared all event listeners');
   }
 
   /**

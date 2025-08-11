@@ -32,6 +32,7 @@ import type {
   CompletionRateData,
   AnalyticsSummary as AnalyticsSummaryType,
 } from '@/types/analytics';
+import { event, analytics } from '@/lib/logger';
 
 export default function DashboardPage() {
   const [session, setSession] = useState<any>(null);
@@ -71,11 +72,11 @@ export default function DashboardPage() {
   
   // Listen to task events and trigger analytics refresh
   useTaskEvents((eventType, payload) => {
-    console.log(`🔗 Dashboard: Received ${eventType} event:`, payload);
+    event(`Dashboard: Received ${eventType} event:`, payload);
     
     // Trigger analytics refresh when tasks change
     if (payload.userId === session?.user?.id) {
-      console.log('🔄 Dashboard: Triggering analytics refresh due to task change');
+      analytics('Dashboard: Triggering analytics refresh due to task change');
       emitAnalyticsRefreshNeeded({
         userId: payload.userId,
         trigger: 'task_change',
@@ -91,11 +92,11 @@ export default function DashboardPage() {
   
   // Listen to habit events and trigger analytics refresh
   useHabitEvents((eventType, payload) => {
-    console.log(`🔗 Dashboard: Received ${eventType} event:`, payload);
+    event(`Dashboard: Received ${eventType} event:`, payload);
     
     // Trigger analytics refresh when habits change
     if (payload.userId === session?.user?.id) {
-      console.log('🔄 Dashboard: Triggering analytics refresh due to habit change');
+      analytics('Dashboard: Triggering analytics refresh due to habit change');
       emitAnalyticsRefreshNeeded({
         userId: payload.userId,
         trigger: 'habit_change',
@@ -111,18 +112,18 @@ export default function DashboardPage() {
   
   // Listen to analytics events
   useAnalyticsEvents((eventType, payload) => {
-    console.log(`🔗 Dashboard: Received ${eventType} event:`, payload);
+    event(`Dashboard: Received ${eventType} event:`, payload);
     
     // Handle analytics events
     switch (eventType) {
       case 'ANALYTICS_REFRESH_NEEDED':
-        console.log('🔄 Dashboard: Analytics refresh needed');
+        analytics('Dashboard: Analytics refresh needed');
         if (activeSlice === 'analytics') {
           fetchAnalyticsData();
         }
         break;
       case 'ANALYTICS_DATA_UPDATED':
-        console.log('🔄 Dashboard: Analytics data updated');
+        analytics('Dashboard: Analytics data updated');
         setLastRealTimeUpdate(new Date());
         break;
     }
@@ -132,7 +133,7 @@ export default function DashboardPage() {
   const { isConnected: analyticsConnected } = useRealtimeAnalytics({
     userId: session?.user?.id || '',
     onDataChange: () => {
-      console.log('📊 Dashboard: Real-time analytics update triggered');
+      analytics('Dashboard: Real-time analytics update triggered');
       setLastRealTimeUpdate(new Date());
       // Always refresh analytics data when real-time events occur
       fetchAnalyticsData();

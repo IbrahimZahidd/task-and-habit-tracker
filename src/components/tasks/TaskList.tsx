@@ -11,6 +11,7 @@ import {
   useEventEmitters,
 } from '@/hooks/use-cross-slice-events';
 import { Button } from '@/components/ui/button';
+import { event, realtime, success, warning, debug } from '@/lib/logger';
 import {
   Select,
   SelectContent,
@@ -99,12 +100,12 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
   // Listen to task events from other components
   useTaskEvents((eventType, payload) => {
     const taskPayload = payload as any;
-    console.log(`🔗 TaskList: Received ${eventType} event:`, payload);
+    event(`TaskList: Received ${eventType} event:`, payload);
 
     // Handle cross-slice task events if needed
     if (eventType === 'TASK_CREATED' && taskPayload.userId === userId) {
       // Task was created elsewhere, refresh the list
-      console.log('🔄 TaskList: Refreshing due to external task creation');
+      debug('TaskList: Refreshing due to external task creation');
       // The real-time subscription should handle this, but we can add additional logic here
     }
   });
@@ -133,7 +134,7 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
 
     const setupRealtimeSubscription = async () => {
       try {
-        console.log('🔌 Setting up real-time subscription for tasks...');
+        realtime('Setting up real-time subscription for tasks...');
 
         // Use the centralized subscription system
         const { subscribeToTable } = await import(
@@ -147,20 +148,20 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
           filter: `user_id=eq.${userId}`,
           onEvent: (payload) => {
             if (!isSubscribed) return;
-            console.log('📡 TaskList: Real-time event received:', payload);
+            realtime('TaskList: Real-time event received:', payload);
 
             const { eventType, new: newRecord } = payload;
             const task = newRecord as Task;
 
             if (eventType === 'INSERT') {
-              console.log('📝 TaskList: Processing INSERT event');
+              debug('TaskList: Processing INSERT event');
               setTasks((prev) => {
                 // Check if task already exists to prevent duplicates
                 if (prev.some((t) => t.id === task.id)) {
-                  console.log('📝 Task already exists, skipping:', task.title);
+                  debug('Task already exists, skipping:', task.title);
                   return prev;
                 }
-                console.log('📝 Adding new task to state:', task.title);
+                debug('Adding new task to state:', task.title);
 
                 // Emit cross-slice event for task creation
                 emitTaskCreated(task.id, task.user_id, task.title);
@@ -168,16 +169,13 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
                 return [task, ...prev];
               });
             } else if (eventType === 'UPDATE') {
-              console.log('📝 TaskList: Processing UPDATE event');
+              debug('TaskList: Processing UPDATE event');
 
               // Check if this is a soft delete (deleted_at is set)
               if (task.deleted_at) {
-                console.log('📡 Soft DELETE detected:', task.title);
+                realtime('Soft DELETE detected:', task.title);
                 setTasks((prev) => {
-                  console.log(
-                    '📝 Removing soft-deleted task from state:',
-                    task.title,
-                  );
+                  debug('Removing soft-deleted task from state:', task.title);
 
                   // Emit cross-slice event for task deletion
                   emitTaskDeleted(task.id, task.user_id, task.title);
@@ -187,7 +185,7 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
               } else {
                 // Regular update
                 setTasks((prev) => {
-                  console.log('📝 Updating task in state:', task.title);
+                  debug('Updating task in state:', task.title);
 
                   // Emit cross-slice event for task update
                   emitTaskUpdated(task.id, task.user_id, task.title);
@@ -202,18 +200,18 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
             setIsRealtimeConnected(false);
           },
           onConnect: () => {
-            console.log('✅ TaskList: Tasks subscription connected');
+            success('TaskList: Tasks subscription connected');
             setIsRealtimeConnected(true);
           },
           onDisconnect: () => {
-            console.log('❌ TaskList: Tasks subscription disconnected');
+            warning('TaskList: Tasks subscription disconnected');
             setIsRealtimeConnected(false);
           },
         });
 
         subscriptionRef.current = subscription;
         setIsRealtimeConnected(true);
-        console.log('✅ TaskList: Real-time subscription established');
+        success('TaskList: Real-time subscription established');
       } catch (error) {
         console.error(
           '❌ TaskList: Failed to setup real-time subscription:',
@@ -231,7 +229,7 @@ export default function TaskList({ userId, refreshKey }: TaskListProps) {
     return () => {
       isSubscribed = false;
       if (subscriptionRef.current) {
-        console.log('🧹 Cleaning up real-time subscription for tasks');
+        realtime('Cleaning up real-time subscription for tasks');
         subscriptionRef.current.unsubscribe().catch(console.error);
         subscriptionRef.current = null;
         setIsRealtimeConnected(false);

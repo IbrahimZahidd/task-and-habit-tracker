@@ -24,10 +24,28 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## .env.local
 
- NEXT_PUBLIC_SUPABASE_URL=https://nextpublicsupabaseurl.supabase.co
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://nextpublicsupabaseurl.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=samplenextpublicsupabaseanonkey
 NEXT_PUBLIC_SITE_URL=https://your-hosted-url.vercel.app/
 NODE_ENV=development
+
+# Security: Console Logging Control
+# Set to 'true' to enable detailed console logging in development
+# Set to 'false' or remove to disable all console logs for security
+NEXT_PUBLIC_ENABLE_LOGGING=false
+```
+
+## Security Features
+
+This project includes comprehensive security measures to protect user data and privacy:
+
+- **Secure Console Logging**: All console logs are controlled through a centralized logger utility
+- **Environment-Based Logging**: Logging can be completely disabled in production
+- **No Sensitive Data Exposure**: User IDs, database structures, and API details are never logged to the browser console
+- **Real-Time Security**: Real-time subscription details are protected from exposure
+
+See [SECURITY.md](./SECURITY.md) for detailed security documentation.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -41,8 +59,6 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome
-
-
 
 ## Deploy on Vercel
 

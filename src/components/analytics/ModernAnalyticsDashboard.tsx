@@ -10,6 +10,7 @@ import {
   Activity,
   CheckCircle2,
 } from 'lucide-react';
+import { event, analytics } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -66,21 +67,18 @@ export default function ModernAnalyticsDashboard({
 
   // Listen to analytics events from other components
   useAnalyticsEvents((eventType, payload) => {
-    console.log(
-      `🔗 ModernAnalyticsDashboard: Received ${eventType} event:`,
-      payload,
-    );
+    event(`ModernAnalyticsDashboard: Received ${eventType} event:`, payload);
 
     // Handle analytics events from other components
     switch (eventType) {
       case 'ANALYTICS_REFRESH_NEEDED':
-        console.log(
-          '🔄 ModernAnalyticsDashboard: Refreshing due to external trigger',
+        analytics(
+          'ModernAnalyticsDashboard: Refreshing due to external trigger',
         );
         onRefresh();
         break;
       case 'ANALYTICS_DATA_UPDATED':
-        console.log('🔄 ModernAnalyticsDashboard: Data updated externally');
+        analytics('ModernAnalyticsDashboard: Data updated externally');
         // The parent component will handle the data update
         break;
     }

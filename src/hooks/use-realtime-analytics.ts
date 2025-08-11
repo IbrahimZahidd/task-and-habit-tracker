@@ -4,6 +4,7 @@ import { analyticsToasts } from '@/lib/toast';
 import type { SubscriptionHandle } from '@/lib/realtime-subscriptions';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { useState } from 'react';
+import { analytics, realtime, success, error } from '@/lib/logger';
 
 interface UseRealtimeAnalyticsOptions {
   userId: string;
@@ -41,7 +42,7 @@ export function useRealtimeAnalytics({
     debounce(() => {
       if (!isSubscribed.current) return;
 
-      console.log('📊 Real-time analytics refresh triggered');
+      analytics('Real-time analytics refresh triggered');
       // Removed analytics toast to prevent overlapping with task/habit toasts
       onDataChangeRef.current?.();
     }, 1000), // 1 second debounce
@@ -53,7 +54,7 @@ export function useRealtimeAnalytics({
     (payload: RealtimePostgresChangesPayload<any>) => {
       if (!isSubscribed.current) return;
 
-      console.log('📊 Analytics-relevant real-time event:', {
+      analytics('Analytics-relevant real-time event:', {
         table: payload.table,
         eventType: payload.eventType,
         recordId: (payload.new as any)?.id || (payload.old as any)?.id,
@@ -73,7 +74,7 @@ export function useRealtimeAnalytics({
 
     const setupSubscriptions = async () => {
       try {
-        console.log('🔌 Setting up real-time analytics subscriptions...');
+        realtime('Setting up real-time analytics subscriptions...');
 
         const subscriptions = await subscribeToAnalytics(
           userId,
@@ -87,7 +88,7 @@ export function useRealtimeAnalytics({
         if (mounted) {
           subscriptionRefs.current = subscriptions;
           setIsConnected(true);
-          console.log('✅ Real-time analytics subscriptions established');
+          success('Real-time analytics subscriptions established');
         }
       } catch (error) {
         console.error('❌ Failed to setup analytics subscriptions:', error);
@@ -110,7 +111,7 @@ export function useRealtimeAnalytics({
 
       const cleanup = async () => {
         try {
-          console.log('🧹 Cleaning up real-time analytics subscriptions...');
+          realtime('Cleaning up real-time analytics subscriptions...');
 
           for (const subscription of subscriptionRefs.current) {
             await subscription.unsubscribe();
@@ -118,7 +119,7 @@ export function useRealtimeAnalytics({
 
           subscriptionRefs.current = [];
           setIsConnected(false);
-          console.log('✅ Real-time analytics subscriptions cleaned up');
+          success('Real-time analytics subscriptions cleaned up');
         } catch (error) {
           console.error('❌ Error cleaning up analytics subscriptions:', error);
         }
@@ -130,7 +131,7 @@ export function useRealtimeAnalytics({
 
   // Manual refresh function
   const refreshAnalytics = useCallback(() => {
-    console.log('📊 Manual analytics refresh triggered');
+          analytics('Manual analytics refresh triggered');
     onDataChange?.();
   }, [onDataChange]);
 

@@ -14,6 +14,7 @@ import {
   useEventEmitters,
 } from '@/hooks/use-cross-slice-events';
 import { habitToasts } from '@/lib/toast';
+import { event, realtime, success, warning, debug } from '@/lib/logger';
 
 type HabitListProps = {
   userId: string;
@@ -55,28 +56,28 @@ export default function HabitList({
 
   // Listen to habit events from other components
   useHabitEvents((eventType, payload) => {
-    console.log(`🔗 HabitList: Received ${eventType} event:`, payload);
+    event(`HabitList: Received ${eventType} event:`, payload);
 
     // Handle habit events from other components
     switch (eventType) {
       case 'HABIT_CREATED':
         // Refresh habits list when a new habit is created elsewhere
         if (payload.userId === userId) {
-          console.log('🔄 HabitList: Refreshing due to habit creation');
+          debug('HabitList: Refreshing due to habit creation');
           fetchHabits(userId).then(setHabits).catch(console.error);
         }
         break;
       case 'HABIT_UPDATED':
         // Update specific habit in the list
         if (payload.userId === userId) {
-          console.log('🔄 HabitList: Updating habit due to external change');
+          debug('HabitList: Updating habit due to external change');
           fetchHabits(userId).then(setHabits).catch(console.error);
         }
         break;
       case 'HABIT_DELETED':
         // Remove habit from the list
         if (payload.userId === userId) {
-          console.log('🔄 HabitList: Removing habit due to external deletion');
+          debug('HabitList: Removing habit due to external deletion');
           const habitPayload = payload as any; // Type assertion for habit events
           setHabits((prev) =>
             prev.filter((habit) => habit.id !== habitPayload.habitId),
@@ -110,27 +111,24 @@ export default function HabitList({
 
     const setupRealtimeSubscription = async () => {
       try {
-        console.log('🔌 Setting up real-time subscription for habits...');
+        realtime('Setting up real-time subscription for habits...');
 
         // Use the centralized subscription system that's working for analytics
         const { subscribeToTable } = await import(
           '@/lib/realtime-subscriptions'
         );
 
-        console.log(
-          '🔌 HabitList: About to subscribe to habits for userId:',
-          userId,
-        );
-                 const uniqueChannelName = `habits-list-${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-         const subscription = await subscribeToTable({
-           channelName: uniqueChannelName,
-           table: 'habits',
-           event: 'ALL',
-           filter: `user_id=eq.${userId}`,
+        realtime('HabitList: About to subscribe to habits for userId:', userId);
+        const uniqueChannelName = `habits-list-${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const subscription = await subscribeToTable({
+          channelName: uniqueChannelName,
+          table: 'habits',
+          event: 'ALL',
+          filter: `user_id=eq.${userId}`,
           onEvent: (payload) => {
             if (!isSubscribed) return;
-            console.log('📡 HabitList: Real-time event received:', payload);
-            console.log('🔍 HabitList: Event details:', {
+            realtime('HabitList: Real-time event received:', payload);
+            debug('HabitList: Event details:', {
               eventType: payload.eventType,
               table: payload.table,
               new: payload.new,
@@ -140,7 +138,7 @@ export default function HabitList({
             const { eventType, new: newRecord, old: oldRecord } = payload;
             const habit = newRecord as Habit;
 
-            console.log('🔍 HabitList: Event details:', {
+            debug('HabitList: Event details:', {
               eventType,
               habitId: habit?.id,
               habitName: habit?.name,
@@ -149,14 +147,14 @@ export default function HabitList({
             });
 
             if (eventType === 'INSERT') {
-              console.log('📝 HabitList: Processing INSERT event');
+              debug('HabitList: Processing INSERT event');
               setHabits((prev) => {
                 // Check if habit already exists to prevent duplicates
                 if (prev.some((h) => h.id === habit.id)) {
-                  console.log('📝 Habit already exists, skipping:', habit.name);
+                  debug('Habit already exists, skipping:', habit.name);
                   return prev;
                 }
-                console.log('📝 Adding new habit to state:', habit.name);
+                debug('Adding new habit to state:', habit.name);
 
                 // Emit cross-slice event for habit creation
                 emitHabitCreated({
@@ -166,22 +164,22 @@ export default function HabitList({
                   timestamp: new Date(),
                 });
 
-                                 // Don't show toast for real-time events to avoid duplicates
-                 console.log('🔔 Skipping toast for real-time habit creation:', habit.name);
+                // Don't show toast for real-time events to avoid duplicates
+                debug(
+                  'Skipping toast for real-time habit creation:',
+                  habit.name,
+                );
 
                 return [habit, ...prev];
               });
             } else if (eventType === 'UPDATE') {
-              console.log('📝 HabitList: Processing UPDATE event');
+              debug('HabitList: Processing UPDATE event');
 
               // Check if this is a soft delete (deleted_at is set)
               if (habit.deleted_at) {
-                console.log('📡 Soft DELETE detected:', habit.name);
+                realtime('Soft DELETE detected:', habit.name);
                 setHabits((prev) => {
-                  console.log(
-                    '📝 Removing soft-deleted habit from state:',
-                    habit.name,
-                  );
+                  debug('Removing soft-deleted habit from state:', habit.name);
 
                   // Emit cross-slice event for habit deletion
                   emitHabitDeleted({
@@ -191,18 +189,18 @@ export default function HabitList({
                     timestamp: new Date(),
                   });
 
-                                     // Don't show toast for real-time events to avoid duplicates
-                   console.log(
-                     '🔔 Skipping toast for real-time habit deletion:',
-                     habit.name,
-                   );
+                  // Don't show toast for real-time events to avoid duplicates
+                  debug(
+                    'Skipping toast for real-time habit deletion:',
+                    habit.name,
+                  );
 
                   return prev.filter((h) => h.id !== habit.id);
                 });
               } else {
                 // Regular update
                 setHabits((prev) => {
-                  console.log('📝 Updating habit in state:', habit.name);
+                  debug('Updating habit in state:', habit.name);
 
                   // Emit cross-slice event for habit update
                   emitHabitUpdated({
@@ -212,8 +210,11 @@ export default function HabitList({
                     timestamp: new Date(),
                   });
 
-                                     // Don't show toast for real-time events to avoid duplicates
-                   console.log('🔔 Skipping toast for real-time habit update:', habit.name);
+                  // Don't show toast for real-time events to avoid duplicates
+                  debug(
+                    '🔔 Skipping toast for real-time habit update:',
+                    habit.name,
+                  );
 
                   return prev.map((h) => (h.id === habit.id ? habit : h));
                 });
@@ -225,24 +226,24 @@ export default function HabitList({
             setIsRealtimeConnected(false);
           },
           onConnect: () => {
-            console.log('✅ HabitList: Habits subscription connected');
-                         console.log('🔍 HabitList: Subscription details:', {
-               channelName: uniqueChannelName,
-               userId,
-               isSubscribed,
-             });
+            success('HabitList: Habits subscription connected');
+            debug('HabitList: Subscription details:', {
+              channelName: uniqueChannelName,
+              userId,
+              isSubscribed,
+            });
             setIsRealtimeConnected(true);
             // Removed explicit toast call to prevent duplicate toasts
           },
           onDisconnect: () => {
-            console.log('❌ HabitList: Habits subscription disconnected');
+            warning('HabitList: Habits subscription disconnected');
             setIsRealtimeConnected(false);
           },
         });
 
         subscriptionRef.current = subscription;
         setIsRealtimeConnected(true);
-        console.log('✅ HabitList: Real-time subscription established');
+        success('HabitList: Real-time subscription established');
       } catch (error) {
         console.error(
           '❌ HabitList: Failed to setup real-time subscription:',
@@ -253,22 +254,20 @@ export default function HabitList({
     };
 
     if (userId) {
-      console.log(
-        '🔌 HabitList: Starting real-time subscription for userId:',
+      realtime(
+        'HabitList: Starting real-time subscription for userId:',
         userId,
       );
       setupRealtimeSubscription();
     } else {
-      console.log(
-        '❌ HabitList: No userId provided, skipping real-time subscription',
-      );
+      warning('HabitList: No userId provided, skipping real-time subscription');
     }
 
     // Cleanup subscription on unmount
     return () => {
       isSubscribed = false;
       if (subscriptionRef.current) {
-        console.log('🧹 HabitList: Cleaning up real-time subscription');
+        realtime('HabitList: Cleaning up real-time subscription');
         subscriptionRef.current.unsubscribe().catch(console.error);
         subscriptionRef.current = null;
         setIsRealtimeConnected(false);
@@ -289,7 +288,7 @@ export default function HabitList({
 
     setDeletingHabitId(habitId);
     setShowDeleteConfirm(false);
-    
+
     try {
       await deleteHabit(habitId);
       setHabits((prev) => prev.filter((habit) => habit.id !== habitId));

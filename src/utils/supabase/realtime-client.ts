@@ -8,6 +8,7 @@ import type {
   RealtimeConnection,
   ChannelStatus,
 } from '@/types/realtime';
+import { realtime, success, warning, error } from '@/lib/logger';
 
 /**
  * Real-time client configuration for Supabase
@@ -70,9 +71,7 @@ class RealtimeConnectionManager {
     filter?: string,
   ): Promise<RealtimeChannel> {
     try {
-      console.log(
-        `🔌 Subscribing to ${channelName} for ${table} ${event} events`,
-      );
+      realtime(`Subscribing to ${channelName} for ${table} ${event} events`);
 
       // Create channel subscription
       const channel = this.client.channel(channelName);
@@ -90,7 +89,7 @@ class RealtimeConnectionManager {
               filter,
             },
             (payload: RealtimePostgresChangesPayload<any>) => {
-              console.log(`📡 Received INSERT event for ${table}:`, payload);
+              realtime(`Received INSERT event for ${table}:`, payload);
               callback(payload);
             },
           )
@@ -103,7 +102,7 @@ class RealtimeConnectionManager {
               filter,
             },
             (payload: RealtimePostgresChangesPayload<any>) => {
-              console.log(`📡 Received UPDATE event for ${table}:`, payload);
+              realtime(`Received UPDATE event for ${table}:`, payload);
               callback(payload);
             },
           )
@@ -116,7 +115,7 @@ class RealtimeConnectionManager {
               filter,
             },
             (payload: RealtimePostgresChangesPayload<any>) => {
-              console.log(`📡 Received DELETE event for ${table}:`, payload);
+              realtime(`Received DELETE event for ${table}:`, payload);
               callback(payload);
             },
           );
@@ -131,7 +130,7 @@ class RealtimeConnectionManager {
             filter,
           },
           (payload: RealtimePostgresChangesPayload<any>) => {
-            console.log(`📡 Received ${event} event for ${table}:`, payload);
+            realtime(`Received ${event} event for ${table}:`, payload);
             callback(payload);
           },
         );
@@ -139,7 +138,7 @@ class RealtimeConnectionManager {
 
       // Subscribe to the channel
       channel.subscribe((status) => {
-        console.log(`📡 Channel ${channelName} status:`, status);
+        realtime(`Channel ${channelName} status:`, status);
         this.handleChannelStatus(channelName, status);
       });
 
@@ -160,7 +159,7 @@ class RealtimeConnectionManager {
     try {
       const channel = this.channels.get(channelName);
       if (channel) {
-        console.log(`🔌 Unsubscribing from ${channelName}`);
+        realtime(`Unsubscribing from ${channelName}`);
         await this.client.removeChannel(channel);
         this.channels.delete(channelName);
       }
@@ -185,7 +184,7 @@ class RealtimeConnectionManager {
             reconnectAttempts: 0,
           };
         }
-        console.log(`✅ Channel ${channelName} connected successfully`);
+        success(`Channel ${channelName} connected successfully`);
         break;
       case 'CHANNEL_ERROR':
         // Only mark as disconnected if this was the last channel
@@ -221,10 +220,10 @@ class RealtimeConnectionManager {
             reconnectAttempts: this.connectionStatus.reconnectAttempts,
           };
         }
-        console.log(`🔌 Channel ${channelName} closed`);
+        realtime(`Channel ${channelName} closed`);
         break;
       default:
-        console.log(`📡 Channel ${channelName} status: ${status}`);
+        realtime(`Channel ${channelName} status: ${status}`);
     }
   }
 
@@ -239,7 +238,7 @@ class RealtimeConnectionManager {
    * Cleanup all subscriptions
    */
   async cleanup(): Promise<void> {
-    console.log('🧹 Cleaning up all real-time subscriptions');
+    realtime('Cleaning up all real-time subscriptions');
     const unsubscribePromises = Array.from(this.channels.keys()).map(
       (channelName) => this.unsubscribe(channelName),
     );
